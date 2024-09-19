@@ -16,7 +16,7 @@ import sys
 #from IPython.display import display
 
 
-def prepare(source_file, target_file, source_lang, target_lang, lower=False):
+def prepare(source_file, target_file, source_lang, target_lang, MAX_LEN = 100,lower=False):
     
     df_source = pd.read_csv(source_file, names=['Source'], sep="\0", quoting=csv.QUOTE_NONE, skip_blank_lines=False, on_bad_lines="skip")
     df_target = pd.read_csv(target_file, names=['Target'], sep="\0", quoting=csv.QUOTE_NONE, skip_blank_lines=False, on_bad_lines="skip")
@@ -55,23 +55,25 @@ def prepare(source_file, target_file, source_lang, target_lang, lower=False):
 
     # Drop too-long rows (source or target)
     # Based on your language, change the values "2" and "200"
-    df["Too-Long"] = ((df['Source'].str.count(' ')+1) > (df['Target'].str.count(' ')+1) * 2) |  \
-                     ((df['Target'].str.count(' ')+1) > (df['Source'].str.count(' ')+1) * 2) |  \
-                     ((df['Source'].str.count(' ')+1) > 200) |  \
-                     ((df['Target'].str.count(' ')+1) > 200)
-                
-    #display(df.loc[df['Too-Long'] == True]) # display only too long rows
+    # Max length label
+     # Giới hạn số từ, mày có thể điều chỉnh số này
+
+    df["Too-Long"] = (df['Source'].str.count(' ') + 1 > MAX_LEN) | \
+                     (df['Target'].str.count(' ') + 1 > MAX_LEN)
+
+    # display(df.loc[df['Too-Long'] == True])  # display only rows that exceed the max length
     df = df.set_index(['Too-Long'])
 
-    try: # To avoid (KeyError: '[True] not found in axis') if there are no too-long cells
-        df = df.drop([True]) # Boolean, not string, do not add quotes
+    try:
+        df = df.drop([True])  # Boolean, not string, do not add quotes
     except:
         pass
 
     df = df.reset_index()
-    df = df.drop(['Too-Long'], axis = 1)
+    df = df.drop(['Too-Long'], axis=1)
 
-    print("--- Too Long Source/Target Deleted\t--> Rows:", df.shape[0])
+    print(f"--- Rows exceeding {MAX_LEN} words deleted\t--> Rows:", df.shape[0])
+
 
 
     # Remove HTML and normalize
@@ -128,7 +130,7 @@ if __name__ == '__main__':
     target_file = sys.argv[2]    # path to the target file
     source_lang = sys.argv[3]    # source language
     target_lang = sys.argv[4]    # target language
-    
+    MAX_LEN = 512
     # Run the prepare() function
     # Data will be true-case; change to True to lower-case
-    prepare(source_file, target_file, source_lang, target_lang, lower=False)
+    prepare(source_file, target_file, source_lang, target_lang,MAX_LEN, lower=False)
